@@ -1,3 +1,15 @@
+import os
+
+import optuna
+import diffusers
+from diffusers import *
+import torch
+from glob import glob
+from diffusers.utils import load_image
+
+os.chdir("/home/ohada/ProjectBDir")
+
+
 def unclip():
     pipe = StableUnCLIPImg2ImgPipeline.from_pretrained(
         "stabilityai/stable-diffusion-2-1-unclip", torch_dtype=torch.float16, variation="fp16"
