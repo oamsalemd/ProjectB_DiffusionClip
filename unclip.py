@@ -1,5 +1,8 @@
 import os
 
+import matplotlib.pyplot as plt
+# import matplotlib
+# matplotlib.use('GTK3Agg')
 import optuna
 import diffusers
 from diffusers import *
@@ -10,7 +13,7 @@ from diffusers.utils import load_image
 os.chdir("/home/ohada/ProjectBDir")
 
 
-def unclip():
+def unclip(num_inference_steps=20, guidance_scale=10.0, noise_level=0):
     pipe = StableUnCLIPImg2ImgPipeline.from_pretrained(
         "stabilityai/stable-diffusion-2-1-unclip", torch_dtype=torch.float16, variation="fp16"
     )
@@ -30,5 +33,14 @@ def unclip():
         horse_embeds, zebra_embeds = torch.cat(image_embeds).chunk(2, dim=0)
         diff = (zebra_embeds[1:] - horse_embeds[1:]).mean(0)
 
-        images_zebras = pipe(image_embeds=(horse_embeds[0]+diff)[None, :1024]).images
-    images_zebras[0].save("variation_image.png")
+        images_zebras = pipe(
+            num_inference_steps=num_inference_steps,
+            guidance_scale=guidance_scale,
+            noise_level=noise_level,
+            image_embeds=(horse_embeds[0]+diff)[None, :1024]).images
+
+    images_zebras[0].save(f"variation_image_n={num_inference_steps}_g={guidance_scale:.2f}_n={noise_level}.png")
+    return images_zebras[0]
+
+if __name__ == "__main__":
+    img = unclip()
