@@ -1,4 +1,6 @@
-- CLIP-score - how to use, what to set as input (text? image?), ...
+- CLIP-score:
+    * Implement function to wrap all logic
+    * Add CLIP-score to double-sweep for "zebras" caption
 - Come up with additional hyper-parameters for the pipe ("guidance" for de-noising loop?)
 - Pre-process image before using it as latents for initial step
 
