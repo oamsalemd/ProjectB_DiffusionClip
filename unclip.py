@@ -25,12 +25,13 @@ def encode_img(pipe, img, scale=1, device="cuda"):
 
     t_img = to_tensor(img).to(device)
     img_encoded = pipe.vae.encode(t_img.unsqueeze(0), return_dict=False)[0].mean
+    img_encoded = (img_encoded - img_encoded.mean()) / img_encoded.std()
     noise_encoded = torch_utils.randn_tensor(img_encoded.shape, dtype=img_encoded.dtype).to(device)
 
-    return scale * img_encoded + (1-scale) * noise_encoded
+    return (scale * img_encoded) + ((1-scale) * noise_encoded)
 
 
-def unclip(num_inference_steps=20, guidance_scale=10.0, noise_level=0, latents=None):
+def unclip(num_inference_steps=20, guidance_scale=10.0, noise_level=0, noise_scale=0.0):
     pipe = StableUnCLIPImg2ImgPipeline.from_pretrained(
         "stabilityai/stable-diffusion-2-1-unclip", torch_dtype=torch.float16, variation="fp16"
     )
@@ -52,11 +53,13 @@ def unclip(num_inference_steps=20, guidance_scale=10.0, noise_level=0, latents=N
         horse_embeds, zebra_embeds = torch.cat(image_embeds).chunk(2, dim=0)
         diff = (zebra_embeds[1:] - horse_embeds[1:]).mean(0)
 
+        scaled_latents = encode_img(pipe, horse_images[0], scale=noise_scale, device="cuda")
+
         images_zebras = pipe(
             num_inference_steps=num_inference_steps,
             guidance_scale=guidance_scale,
             noise_level=noise_level,
-            latents=latents,
+            latents=scaled_latents,
             image_embeds=(horse_embeds[0]+diff)[None, :1024]).images
 
     to_tensor = transforms.Compose([
@@ -65,7 +68,7 @@ def unclip(num_inference_steps=20, guidance_scale=10.0, noise_level=0, latents=N
         ]
     )
 
-    images_zebras[0].save(f"variation_image_n={num_inference_steps}_g={guidance_scale:.2f}_n={noise_level}.png")
+    images_zebras[0].save(f"variation_image_n={num_inference_steps}_g={guidance_scale:.2f}_n={noise_level}_n={noise_scale}.png")
     return images_zebras[0]
 
 if __name__ == "__main__":
