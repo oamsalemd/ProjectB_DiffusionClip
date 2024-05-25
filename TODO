@@ -4,7 +4,4 @@
 - Come up with additional hyper-parameters for the pipe ("guidance" for de-noising loop?)
 - Pre-process image before using it as latents for initial step
 
-- Status for now:
-1. Double sweep: num_steps, noise_scale (for latents)
-2. Low-noise latents (i.e. high-'image' latents) preserve structure but doesn't implement style transfer well
-3. Low-noise and High-steps show more "sharp" images then Low-steps
+* reverse the implementation of 'postprocess' for the image before embedding it in VAE
