@@ -4,4 +4,8 @@
 - Come up with additional hyper-parameters for the pipe ("guidance" for de-noising loop?)
 - Pre-process image before using it as latents for initial step
 
-* reverse the implementation of 'postprocess' for the image before embedding it in VAE
+1. For basic use-case - no significant difference between DDIM (linear) scheduler and defulat scheduler
+2. Encoding image to latent and calling pipe for 1 inference step resulted in the same original image (fixed)
+3. Timesteps spacing works well for configurable "start_alpha" (overriding DDIM "set_timesteps")
+4. Results: sweeped "start_alpha": [0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.15, 0.2, 0.3]
+(image attached)

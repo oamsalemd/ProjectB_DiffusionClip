@@ -83,10 +83,15 @@ def encode_img(pipe, img, alpha=0.0, device="cuda"):
     ]
     )
 
+    # image to tensor
     t_img = to_tensor(img).to(device)
+    # tensor pre-process
+    t_img = ((t_img - 0.5) * 2)
+    # tensor to latents
     img_encoded = pipe.vae.encode(t_img.unsqueeze(0), return_dict=False)[0].mean
+    # scaling latent
     img_encoded = img_encoded * pipe.vae.config.scaling_factor
-    # img_encoded = (img_encoded - img_encoded.mean()) / img_encoded.std()
+
     noise_encoded = torch_utils.randn_tensor(img_encoded.shape, dtype=img_encoded.dtype).to(device)
 
     return ((alpha ** 0.5) * img_encoded) + (((1 - alpha) ** 0.5) * noise_encoded)
@@ -97,6 +102,7 @@ def unclip(num_inference_steps=20, guidance_scale=10.0, noise_level=0):
         "stabilityai/stable-diffusion-2-1-unclip", torch_dtype=torch.float16, variation="fp16"
     )
     pipe.scheduler = DDIMScheduler_alpha.from_config(pipe.scheduler.config)
+    # pipe.scheduler = DDIMScheduler.from_config(pipe.scheduler.config)
     pipe.scheduler.config.timestep_spacing = "linspace"
     pipe = pipe.to("cuda")
 
@@ -133,5 +139,5 @@ def unclip(num_inference_steps=20, guidance_scale=10.0, noise_level=0):
 
 
 if __name__ == "__main__":
-    start_alpha = 1.0
+    start_alpha = 0.0
     img = unclip()
