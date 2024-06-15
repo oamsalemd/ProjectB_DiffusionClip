@@ -97,7 +97,7 @@ def encode_img(pipe, img, alpha=0.0, device="cuda"):
     return ((alpha ** 0.5) * img_encoded) + (((1 - alpha) ** 0.5) * noise_encoded)
 
 
-def unclip(num_inference_steps=20, guidance_scale=10.0, noise_level=0):
+def unclip(num_inference_steps=20, eta=0, dataset=('horse', 'zebra')):
     pipe = StableUnCLIPImg2ImgPipeline.from_pretrained(
         "stabilityai/stable-diffusion-2-1-unclip", torch_dtype=torch.float16, variation="fp16"
     )
@@ -107,9 +107,9 @@ def unclip(num_inference_steps=20, guidance_scale=10.0, noise_level=0):
     pipe = pipe.to("cuda")
 
     with torch.no_grad():
-        horse_images = [load_image(path) for path in sorted(glob("horse2zebra/horse*.jpg"))]
-        zebra_images = [load_image(path) for path in sorted(glob("horse2zebra/zebra*.jpg"))]
-        images = horse_images + zebra_images
+        from_images = [load_image(path) for path in sorted(glob("datasets/{source}*.jpg".format(source=dataset[0])))]
+        to_images = [load_image(path) for path in sorted(glob("datasets/{to}*.jpg".format(to=dataset[1])))]
+        images = from_images + to_images
         image_embeds = [pipe._encode_image(
             image=(im,),
             device=pipe.device,
@@ -120,24 +120,23 @@ def unclip(num_inference_steps=20, guidance_scale=10.0, noise_level=0):
             generator=None,
             image_embeds=None,
         ) for im in images]
-        horse_embeds, zebra_embeds = torch.cat(image_embeds).chunk(2, dim=0)
-        diff = (zebra_embeds[1:] - horse_embeds[1:]).mean(0)
+        from_embeds, to_embeds = torch.cat(image_embeds).chunk(2, dim=0)
+        diff = (to_embeds[1:] - from_embeds[1:]).mean(0)
 
-        scaled_latents = encode_img(pipe, horse_images[0], alpha=start_alpha, device="cuda")
+        scaled_latents = encode_img(pipe, from_images[0], alpha=start_alpha, device="cuda")
 
-        images_zebras = pipe(
+        output_to = pipe(
             num_inference_steps=num_inference_steps,
-            guidance_scale=guidance_scale,
-            noise_level=noise_level,
             latents=scaled_latents,
-            image_embeds=(horse_embeds[0] + diff)[None, :1024]
+            eta=eta,
+            image_embeds=(from_embeds[0] + diff)[None, :1024]
         ).images
 
-    images_zebras[0].save(
-        f"variation_image_n={num_inference_steps}_g={guidance_scale:.2f}_n={noise_level}_n={start_alpha}.png")
-    return images_zebras[0]
+    output_to[0].save(
+        f"variation_image_steps={num_inference_steps}_alpha={start_alpha}.png")
+    return output_to[0]
 
 
 if __name__ == "__main__":
-    start_alpha = 0.0
-    img = unclip()
+    start_alpha = 0.1
+    img = unclip(dataset=('door_close', 'door_open'))
