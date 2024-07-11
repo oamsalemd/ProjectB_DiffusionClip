@@ -144,14 +144,14 @@ def unclip(num_inference_steps=20, eta=0, dataset=('horse', 'zebra'), test_idx=0
         ).images
 
     # Save the output image
-    output_to[0].save(
-        f"variation_image_steps={num_inference_steps}_alpha={start_alpha}.png")
+    # output_to[0].save(
+    #     f"variation_image_steps={num_inference_steps}_alpha={start_alpha}.png")
     return output_to[0]
 
 
 def sweep_images(num_inference_steps=(20,), alpha=(0,), eta=0, dataset=('horse', 'zebra'), test_idx=0):
     # Create a figure with subplots
-    fig, axs = plt.subplots(len(num_inference_steps), len(alpha), figsize=(20, 20))
+    fig, axs = plt.subplots(len(num_inference_steps), len(alpha), figsize=(20*len(alpha), 20*len(num_inference_steps)))
 
     # If only one value is given for num_inference_steps and alpha, convert them to lists
     if len(num_inference_steps) == 1 and len(alpha) == 1:
@@ -200,7 +200,7 @@ if __name__ == "__main__":
     # Parse arguments:
     parsed_num_inference_steps = args.num_inference_steps if isinstance(args.num_inference_steps, list) else [args.num_inference_steps]
     parsed_alpha = args.alpha if isinstance(args.alpha, list) else [args.alpha]
-    parsed_dataset = ("horse", "zebra") if args.dataset == "1" else ("door_close", "door_open") if args.dataset == "2" else ("black", "blue")
+    parsed_dataset = ("horse", "zebra") if args.dataset == "1" else ("door_close", "door_open") if args.dataset == "2" else ("shirt_black", "shirt_blue")
 
     # Print parsed arguments:
     print("\n=== Parsed arguments:")
