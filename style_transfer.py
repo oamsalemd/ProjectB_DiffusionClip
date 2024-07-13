@@ -10,6 +10,10 @@ import numpy as np
 from typing import List, Optional, Tuple, Union
 import argparse
 
+from torchmetrics.functional.multimodal import clip_score
+from functools import partial
+import numpy as np
+
 # os.chdir("/home/ohada/ProjectBDir")
 
 start_alpha = 0.0
@@ -68,6 +72,12 @@ class DDIMScheduler_alpha(DDIMScheduler):
             )
 
         self.timesteps = torch.from_numpy(timesteps).to(device)
+
+
+def clip_score_func(img, dataset):
+    clip_score_fn = partial(clip_score, model_name_or_path="openai/clip-vit-base-patch16")
+    return round(float(clip_score_fn(torch.from_numpy((np.array(img) * 255).astype("uint8")),
+                                     dataset[-1].replace("_", " ")).detach()), 2)
 
 
 def encode_img(pipe, img, alpha=0.0, device="cuda"):
@@ -151,7 +161,8 @@ def unclip(num_inference_steps=20, eta=0, dataset=('horse', 'zebra'), test_idx=0
 
 def sweep_images(num_inference_steps=(20,), alpha=(0,), eta=0, dataset=('horse', 'zebra'), test_idx=0):
     # Create a figure with subplots
-    fig, axs = plt.subplots(len(num_inference_steps), len(alpha), figsize=(20*len(alpha), 20*len(num_inference_steps)))
+    fig, axs = plt.subplots(len(num_inference_steps), len(alpha),
+                            figsize=(20 * len(alpha), 20 * len(num_inference_steps)))
 
     # If only one value is given for num_inference_steps and alpha, convert them to lists
     if len(num_inference_steps) == 1 and len(alpha) == 1:
@@ -169,12 +180,15 @@ def sweep_images(num_inference_steps=(20,), alpha=(0,), eta=0, dataset=('horse',
             global start_alpha
             start_alpha = a
             img = unclip(nis, eta, dataset, test_idx)
+            score = clip_score_func(img, dataset)
             axs[i, j].imshow(img)
             axs[i, j].axis("off")
-            axs[i, j].set_title(f"Steps={nis}, Alpha={a}")
+            axs[i, j].set_title(f"Steps={nis}, Alpha={a}, CLIP score={score}", fontsize=30)
 
     # Add a title to the figure
-    fig.suptitle(f"Variation of UnCLIP with different number of steps and alpha values\nDataset: {dataset}, Test image index: {test_idx}, Eta={eta}", fontsize=36)
+    fig.suptitle(
+        f"Variation of UnCLIP with different number of steps and alpha values\nDataset: {dataset}, Test image index: {test_idx}, Eta={eta}",
+        fontsize=36)
 
     # Save the figure
     img_name = f"sweep_result--steps={num_inference_steps}_alpha={alpha}_eta={eta}_dataset={dataset}_test_idx={test_idx}.png"
@@ -190,17 +204,21 @@ if __name__ == "__main__":
 
     # Take arguments from the command line:
     argsp = argparse.ArgumentParser()
-    argsp.add_argument("--num_inference_steps", nargs='+', type=int, default=20, help="Number of inference steps to sweep over")
+    argsp.add_argument("--num_inference_steps", nargs='+', type=int, default=20,
+                       help="Number of inference steps to sweep over")
     argsp.add_argument("--alpha", type=float, nargs='+', default=0, help="Alpha values to sweep over")
     argsp.add_argument("--eta", type=float, default=0, help="Eta value")
-    argsp.add_argument("--dataset", type=str, default="1", choices=("1", "2", "3"), help="1: horse2zebra, 2: open2close, 3: black2blue")
+    argsp.add_argument("--dataset", type=str, default="1", choices=("1", "2", "3"),
+                       help="1: horse2zebra, 2: open2close, 3: black2blue")
     argsp.add_argument("--test_idx", type=int, default=0, help="Index of test image out of the dataset")
     args = argsp.parse_args()
 
     # Parse arguments:
-    parsed_num_inference_steps = args.num_inference_steps if isinstance(args.num_inference_steps, list) else [args.num_inference_steps]
+    parsed_num_inference_steps = args.num_inference_steps if isinstance(args.num_inference_steps, list) else [
+        args.num_inference_steps]
     parsed_alpha = args.alpha if isinstance(args.alpha, list) else [args.alpha]
-    parsed_dataset = ("horse", "zebra") if args.dataset == "1" else ("door_close", "door_open") if args.dataset == "2" else ("shirt_black", "shirt_blue")
+    parsed_dataset = ("horse", "zebra") if args.dataset == "1" else (
+    "door_close", "door_open") if args.dataset == "2" else ("shirt_black", "shirt_blue")
 
     # Print parsed arguments:
     print("\n=== Parsed arguments:")
@@ -211,4 +229,5 @@ if __name__ == "__main__":
     print(f"test_idx: {args.test_idx}\n")
 
     # Run the sweep_images function with the parsed arguments:
-    sweep_images(num_inference_steps=tuple(parsed_num_inference_steps), alpha=tuple(parsed_alpha), eta=args.eta, dataset=parsed_dataset, test_idx=args.test_idx)
+    sweep_images(num_inference_steps=tuple(parsed_num_inference_steps), alpha=tuple(parsed_alpha), eta=args.eta,
+                 dataset=parsed_dataset, test_idx=args.test_idx)
